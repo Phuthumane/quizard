@@ -1,0 +1,27 @@
+.choice-container {
+  display: flex;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  font-size: 1.8rem;
+  border: 0.1rem solid #2e7d32;
+  background-color: #f1f1f1;
+  transition: all 200ms ease-in-out;
+}
+
+.choice-prefix {
+  padding: 1.5rem 2.5rem;
+  background-color: #2e7d32;
+  color: #f1f1f1;
+}
+
+.choice-text {
+  padding: 1.5rem;
+}
+
+.choice-container:hover {
+  cursor: pointer;
+  background-color: greenyellow;
+  box-shadow: 0 0.8rem 1.6rem rgba(46, 125, 50, 0.4);
+  transform: translateY(-0.2rem);
+  color: #f1f1f1;
+}
