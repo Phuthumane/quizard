@@ -4,16 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>quizard</title>
+    <title>Top Wizards</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="topWizards.css" />
   </head>
   <body>
     <div class="container">
-      <div id="home" class="flex-center flex-column">
-        <h1>Quizard Challenge</h1>
-        <a class="btn" href="/quiz.html">Take Quiz</a>
-        <a class="btn" href="/topWizards.html">Top Wizards</a>
+      <div id="highScores" class="flex-center flex-column">
+        <h1 id="finalScore">Top Wizards</h1>
+        <ul id="topWizardsList"></ul>
+        <a class="btn" href="/">Go Home</a>
       </div>
     </div>
+    <script src="topWizards.js"></script>
   </body>
 </html>
