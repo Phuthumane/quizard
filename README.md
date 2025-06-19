@@ -16,7 +16,7 @@
 
 ## 🌐 Live Demo
 
-Play it here 👉 [https://username.github.io/quizard](https://username.github.io/quizard)
+Play it here 👉 [https://phuthumane.github.io/quizard](https://phuthumane.github.io/quizard)
 
 ---
 
