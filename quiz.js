@@ -1,109 +1,199 @@
-const question = document.getElementById("question");
-const choices = Array.from(document.getElementsByClassName("choice-text"));
-const progressText = document.getElementById("progressText");
-const scoreText = document.getElementById("score");
-const progressBarFull = document.getElementById("progressBarFull");
-const loader = document.getElementById("loader");
-const quiz = document.getElementById("quiz");
-let currentQuestion = {};
-let acceptingAnswers = false;
-let score = 0;
-let questionCounter = 0;
-let availableQuesions = [];
+// DOM Elements
+const questionElement = document.getElementById("question");
+const choicesElements = document.querySelectorAll(".choice-container");
+const choiceTextElements = document.querySelectorAll(".choice-text");
+const progressTextElement = document.getElementById("progressText");
+const scoreElement = document.getElementById("score");
+const progressBarElement = document.getElementById("progressBarFull");
+const loaderElement = document.getElementById("loader");
+const quizElement = document.getElementById("quiz");
 
-let questions = [];
-
-fetch(
-  "https://opentdb.com/api.php?amount=10&category=22&difficulty=easy&type=multiple"
-)
-  .then((res) => {
-    return res.json();
-  })
-  .then((loadedQuestions) => {
-    questions = loadedQuestions.results.map((loadedQuestion) => {
-      const formattedQuestion = {
-        question: loadedQuestion.question,
-      };
-
-      const answerChoices = [...loadedQuestion.incorrect_answers];
-      formattedQuestion.answer = Math.floor(Math.random() * 4) + 1;
-      answerChoices.splice(
-        formattedQuestion.answer - 1,
-        0,
-        loadedQuestion.correct_answer
-      );
-
-      answerChoices.forEach((choice, index) => {
-        formattedQuestion["choice" + (index + 1)] = choice;
-      });
-
-      return formattedQuestion;
-    });
-
-    startGame();
-  })
-  .catch((err) => {
-    console.error(err);
-  });
-
-//CONSTANTS
+// Quiz Constants
 const CORRECT_BONUS = 10;
 const MAX_QUESTIONS = 10;
+const API_URL =
+  "https://opentdb.com/api.php?amount=10&category=22&difficulty=easy&type=multiple";
 
-startGame = () => {
-  questionCounter = 0;
-  score = 0;
-  availableQuesions = [...questions];
-  getNewQuestion();
-  quiz.classList.remove("hidden");
-  loader.classList.add("hidden");
+// Quiz State
+const quizState = {
+  currentQuestion: null,
+  isAcceptingAnswers: false,
+  score: 0,
+  questionCounter: 0,
+  availableQuestions: [],
+  questions: [],
 };
 
-getNewQuestion = () => {
-  if (availableQuesions.length === 0 || questionCounter >= MAX_QUESTIONS) {
-    localStorage.setItem("mostRecentScore", score);
-    return window.location.assign("/end.html");
-  }
-  questionCounter++;
-  progressText.innerText = `Question ${questionCounter}/${MAX_QUESTIONS}`;
-  progressBarFull.style.width = `${(questionCounter / MAX_QUESTIONS) * 100}%`;
-  const questionIndex = Math.floor(Math.random() * availableQuesions.length);
-  currentQuestion = availableQuesions[questionIndex];
-  question.innerText = currentQuestion.question;
-  choices.forEach((choice) => {
-    const number = choice.dataset["number"];
-    choice.innerText = currentQuestion["choice" + number];
-  });
+// Initialize the quiz
+async function initializeQuiz() {
+  try {
+    // Show loader while fetching questions
+    loaderElement.style.display = "block";
+    quizElement.classList.add("hidden");
 
-  availableQuesions.splice(questionIndex, 1);
-  acceptingAnswers = true;
-};
+    const response = await fetch(API_URL);
 
-choices.forEach((choice) => {
-  choice.addEventListener("click", (e) => {
-    if (!acceptingAnswers) return;
-
-    acceptingAnswers = false;
-    const selectedChoice = e.target;
-    const selectedAnswer = selectedChoice.dataset["number"];
-
-    const classToApply =
-      selectedAnswer == currentQuestion.answer ? "correct" : "incorrect";
-
-    if (classToApply === "correct") {
-      incrementScore(CORRECT_BONUS);
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
     }
 
-    selectedChoice.parentElement.classList.add(classToApply);
+    const data = await response.json();
+    quizState.questions = formatQuestions(data.results);
+    startQuiz();
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    displayError("Failed to load questions. Please try again later.");
+  }
+}
 
-    setTimeout(() => {
-      selectedChoice.parentElement.classList.remove(classToApply);
-      getNewQuestion();
-    }, 1000);
+// Format questions from API
+function formatQuestions(apiQuestions) {
+  return apiQuestions.map((question) => {
+    const answerChoices = [...question.incorrect_answers];
+    const correctAnswerIndex = Math.floor(Math.random() * 4);
+    answerChoices.splice(correctAnswerIndex, 0, question.correct_answer);
+
+    return {
+      question: decodeHtmlEntities(question.question),
+      answer: correctAnswerIndex + 1,
+      choices: answerChoices.map((choice) => decodeHtmlEntities(choice)),
+    };
+  });
+}
+
+// Decode HTML entities in questions and answers
+function decodeHtmlEntities(text) {
+  const textArea = document.createElement("textarea");
+  textArea.innerHTML = text;
+  return textArea.value;
+}
+
+// Start the quiz
+function startQuiz() {
+  quizState.score = 0;
+  quizState.questionCounter = 0;
+  quizState.availableQuestions = [...quizState.questions];
+  updateScore();
+
+  // Hide loader and show quiz
+  loaderElement.style.display = "none";
+  quizElement.classList.remove("hidden");
+
+  loadNextQuestion();
+}
+
+// Load the next question
+function loadNextQuestion() {
+  if (
+    quizState.questionCounter >= MAX_QUESTIONS ||
+    quizState.availableQuestions.length === 0
+  ) {
+    endQuiz();
+    return;
+  }
+
+  quizState.questionCounter++;
+  updateProgress();
+
+  const questionIndex = Math.floor(
+    Math.random() * quizState.availableQuestions.length
+  );
+  quizState.currentQuestion = quizState.availableQuestions[questionIndex];
+  quizState.availableQuestions.splice(questionIndex, 1);
+
+  displayQuestion();
+  quizState.isAcceptingAnswers = true;
+}
+
+// Display the current question
+function displayQuestion() {
+  questionElement.textContent = quizState.currentQuestion.question;
+
+  choiceTextElements.forEach((choiceElement, index) => {
+    choiceElement.textContent = quizState.currentQuestion.choices[index];
+  });
+}
+
+// Update progress display
+function updateProgress() {
+  const progressText = `Question ${quizState.questionCounter}/${MAX_QUESTIONS}`;
+  progressTextElement.textContent = progressText;
+
+  const progressPercentage = (quizState.questionCounter / MAX_QUESTIONS) * 100;
+  progressBarElement.style.width = `${progressPercentage}%`;
+}
+
+// Update score display
+function updateScore() {
+  scoreElement.textContent = quizState.score;
+}
+
+// Handle answer selection
+function handleAnswerSelection(selectedChoice) {
+  if (!quizState.isAcceptingAnswers) return;
+
+  quizState.isAcceptingAnswers = false;
+  const selectedAnswer = parseInt(selectedChoice.dataset.choice);
+  const isCorrect = selectedAnswer === quizState.currentQuestion.answer;
+
+  if (isCorrect) {
+    quizState.score += CORRECT_BONUS;
+    updateScore();
+    selectedChoice.classList.add("correct");
+  } else {
+    selectedChoice.classList.add("incorrect");
+    // Highlight correct answer
+    const correctChoice = document.querySelector(
+      `[data-choice="${quizState.currentQuestion.answer}"]`
+    );
+    correctChoice.classList.add("correct");
+  }
+
+  setTimeout(() => {
+    selectedChoice.classList.remove("correct", "incorrect");
+    const correctChoice = document.querySelector(
+      `[data-choice="${quizState.currentQuestion.answer}"]`
+    );
+    if (correctChoice) correctChoice.classList.remove("correct");
+
+    loadNextQuestion();
+  }, 1000);
+}
+
+// End the quiz
+function endQuiz() {
+  localStorage.setItem("mostRecentScore", quizState.score);
+  window.location.assign("end.html");
+}
+
+// Display error message
+function displayError(message) {
+  loaderElement.style.display = "none";
+  quizElement.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #d32f2f; font-size: 1.8rem;">
+            <h2>Error</h2>
+            <p>${message}</p>
+            <button onclick="location.reload()" style="
+              margin-top: 20px;
+              padding: 12px 30px;
+              background-color: #2e7d32;
+              color: white;
+              border: none;
+              border-radius: 5px;
+              font-size: 1.2rem;
+              cursor: pointer;
+            ">Try Again</button>
+          </div>
+        `;
+  quizElement.classList.remove("hidden");
+}
+
+// Event Listeners
+choicesElements.forEach((choice) => {
+  choice.addEventListener("click", () => {
+    handleAnswerSelection(choice);
   });
 });
 
-incrementScore = (num) => {
-  score += num;
-  scoreText.innerText = score;
-};
+// Initialize the quiz
+initializeQuiz();
